@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "514743040063",
+    "project_id": "safepills-a3b1b",
+    "storage_bucket": "safepills-a3b1b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:514743040063:android:bd2659dc69d195d6c6208a",
+        "android_client_info": {
+          "package_name": "com.example.safe_pills"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJc6tM2tegkX2Rnkapz2mLVUMuuxkqPGQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
