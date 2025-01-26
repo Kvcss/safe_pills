@@ -7,8 +7,8 @@ abstract class IPillsRepository {
   Future<List<PillsEntity>> getAllPills();
   Future<void> updatePill(String id, PillsEntity pill);
   Future<void> deletePill(String id);
+  Stream<List<PillsEntity>> getPillsStream();
 }
-
 
 // Implementação do repositório
 class PillsRepository implements IPillsRepository {
@@ -27,10 +27,9 @@ class PillsRepository implements IPillsRepository {
   @override
   Future<List<PillsEntity>> getAllPills() async {
     try {
-      QuerySnapshot querySnapshot = await _db.collection('pills').get();
+      QuerySnapshot querySnapshot = await _db.collection('pills').orderBy('createdAt', descending: true).get();
       return querySnapshot.docs
-          .map((doc) => PillsEntity.fromMap(doc.data() as Map<String, dynamic>)
-            ..id = doc.id) // Inclui o ID do documento no objeto
+          .map((doc) => PillsEntity.fromMap(doc.id, doc.data() as Map<String, dynamic>))
           .toList();
     } catch (e) {
       throw Exception('Erro ao buscar medicamentos: $e');
@@ -55,5 +54,14 @@ class PillsRepository implements IPillsRepository {
     } catch (e) {
       throw Exception('Erro ao deletar medicamento: $e');
     }
+  }
+
+  @override
+  Stream<List<PillsEntity>> getPillsStream() {
+    return _db.collection('pills').orderBy('createdAt', descending: true).snapshots().map((snapshot) {
+      return snapshot.docs
+          .map((doc) => PillsEntity.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+          .toList();
+    });
   }
 }

@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pillsRepository = PillsRepository();
-    final pillsViewModel = PillsViewModel(pillsRepository);
+    final pillsViewModel = PillsViewModel(pillsRepository)  ;
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,

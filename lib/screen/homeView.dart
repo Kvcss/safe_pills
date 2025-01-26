@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:flutter/material.dart';
 import 'package:safe_pills/repository/entity/pills_entity.dart';
+import 'package:safe_pills/utils/addPill.dart';
 import 'package:safe_pills/screen/homeViewModel.dart';
 
 
@@ -16,15 +16,15 @@ class HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<HomeView> {
   @override
-  void initState() {
-    super.initState();
-    widget.viewModel.fetchAllPills(); 
+  void dispose() {
+    widget.viewModel.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6), // Fundo claro
+      backgroundColor: const Color(0xFFF3F4F6),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -59,14 +59,20 @@ class _HomeViewState extends State<HomeView> {
                         children: [
                           _sectionTitle('Atrasados:'),
                           ...pills.where((pill) {
-                            // Filtrar atrasados (implemente sua lógica)
-                            return true;
+                            // Implementar lógica para filtrar atrasados
+                            // Exemplo: Se o horário atual passou do horário de tomar o remédio
+                            TimeOfDay now = TimeOfDay.now();
+                            TimeOfDay pillTime = _parseTime(pill.time);
+                            return _isTimePassed(now, pillTime);
                           }).map((pill) => _buildPillCard(pill, Colors.red)),
                           const SizedBox(height: 20),
                           _sectionTitle('Consumidos:'),
                           ...pills.where((pill) {
-                            // Filtrar consumidos (implemente sua lógica)
-                            return false;
+                            // Implementar lógica para filtrar consumidos
+                            // Exemplo: Se o horário atual não passou do horário de tomar o remédio
+                            TimeOfDay now = TimeOfDay.now();
+                            TimeOfDay pillTime = _parseTime(pill.time);
+                            return !_isTimePassed(now, pillTime);
                           }).map((pill) => _buildPillCard(pill, Colors.green)),
                         ],
                       ),
@@ -81,11 +87,23 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
+  TimeOfDay _parseTime(String time) {
+    // Assume que o tempo está no formato 'HH:MM'
+    final parts = time.split(':');
+    return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+  }
+
+  bool _isTimePassed(TimeOfDay now, TimeOfDay pillTime) {
+    if (now.hour > pillTime.hour) return true;
+    if (now.hour == pillTime.hour && now.minute > pillTime.minute) return true;
+    return false;
+  }
+
   Widget _buildCustomHeader() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 40, 16, 24), // Mais espaçamento no topo
+      padding: const EdgeInsets.fromLTRB(16, 40, 16, 24),
       decoration: const BoxDecoration(
-        color: Color(0xFF2B998B), // Cor principal do app
+        color: Color(0xFF2B998B),
         borderRadius: BorderRadius.vertical(
           bottom: Radius.circular(32),
         ),
@@ -101,13 +119,14 @@ class _HomeViewState extends State<HomeView> {
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: const Color.fromRGBO(43, 153, 139, 1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Image.asset(
-                      'assets/safe_pill_logo.png',
+                      'assets/safe_pill_logo2.png',
                       height: 50,
                       width: 50,
+                      color: Colors.white,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -124,15 +143,21 @@ class _HomeViewState extends State<HomeView> {
               IconButton(
                 icon: const Icon(Icons.add_circle, size: 32, color: Colors.white),
                 onPressed: () {
-                  // Implementar lógica para adicionar medicamento
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddPillView(viewModel: widget.viewModel),
+                    ),
+                  );
                 },
               ),
             ],
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Segunda-feira, 27/01/2024',
-            style: TextStyle(
+          // Atualizar a data dinamicamente
+          Text(
+            '${_getWeekday(DateTime.now().weekday)}, ${_formatDate(DateTime.now())}',
+            style: const TextStyle(
               fontSize: 18,
               color: Colors.white70,
             ),
@@ -140,6 +165,23 @@ class _HomeViewState extends State<HomeView> {
         ],
       ),
     );
+  }
+
+  String _getWeekday(int weekday) {
+    const weekdays = [
+      'Segunda-feira',
+      'Terça-feira',
+      'Quarta-feira',
+      'Quinta-feira',
+      'Sexta-feira',
+      'Sábado',
+      'Domingo'
+    ];
+    return weekdays[weekday - 1];
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
   Widget _sectionTitle(String title) {
@@ -174,9 +216,14 @@ class _HomeViewState extends State<HomeView> {
           pill.name,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        subtitle: Text(
-          'Prioridade: ${pill.priority}',
-          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Dosagem: ${pill.dosage}'),
+            Text('Descrição: ${pill.description}'),
+            Text('Duração: ${pill.duration}'),
+            Text('Prioridade: ${pill.priority}'),
+          ],
         ),
         trailing: Text(
           pill.time,
@@ -184,11 +231,54 @@ class _HomeViewState extends State<HomeView> {
         ),
         onTap: () {
           // Implementar lógica de detalhes/edição
+          _showEditPillDialog(pill);
         },
         onLongPress: () {
           // Implementar lógica para excluir
-          widget.viewModel.deletePill(pill.id!);
+          _confirmDelete(pill.id!);
         },
+      ),
+    );
+  }
+
+  void _confirmDelete(String id) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmar Exclusão'),
+        content: const Text('Você tem certeza que deseja excluir este medicamento?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              widget.viewModel.deletePill(id);
+              Navigator.pop(ctx);
+            },
+            child: const Text(
+              'Excluir',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditPillDialog(PillsEntity pill) {
+    // Implementar a lógica de edição de medicamento
+    // Você pode criar uma tela similar à AddPillView ou usar um Dialog
+    // Para simplicidade, deixaremos essa implementação para você
+    // Exemplo:
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddPillView(
+          viewModel: widget.viewModel,
+          existingPill: pill,
+        ),
       ),
     );
   }
